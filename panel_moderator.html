@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MariskaTools Moderator</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+
+:root{
+  --bg:#f5f6f8;--surface:#fff;--field:#fff;--ink:#161b22;--mute:#667085;--line:#e4e7ec;
+  --accent:#4f46e5;--accent-h:#4338ca;--accent-ink:#fff;--accent-soft:rgba(79,70,229,.1);
+  --danger:#c0392b;--ok:#15803d;--warn:#b45309;--shadow:0 1px 2px rgba(16,24,40,.06),0 8px 24px rgba(16,24,40,.06);
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#0e1217;--surface:#151b23;--field:#0f141b;--ink:#e8ecf1;--mute:#8b95a5;--line:#263040;
+  --accent:#818cf8;--accent-h:#a5b4fc;--accent-ink:#0e1217;--accent-soft:rgba(129,140,248,.14);
+  --danger:#f87171;--ok:#4ade80;--warn:#fbbf24;--shadow:0 8px 24px rgba(0,0,0,.35);
+}}
+*{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--ink);font:14px/1.55 "Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100vh}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ---------- Form elements ---------- */
+label.lbl{display:block;font-size:13px;font-weight:600;margin:14px 0 6px}
+.field{position:relative;display:flex;align-items:center}
+.field>i.lead{position:absolute;left:13px;color:var(--mute);font-size:13px;pointer-events:none}
+.input,textarea,select{width:100%;background:var(--field);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14px;transition:border-color .15s,box-shadow .15s}
+.field .input{padding-left:38px}
+.field .input.has-trail{padding-right:42px}
+.input::placeholder,textarea::placeholder{color:var(--mute);opacity:.8}
+textarea{resize:vertical;min-height:84px}
+.input:focus,textarea:focus,select:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.trail{position:absolute;right:4px;background:none;border:0;color:var(--mute);width:34px;height:34px;border-radius:8px;cursor:pointer}
+.trail:hover{color:var(--ink);background:var(--accent-soft)}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid transparent;border-radius:10px;padding:10px 16px;font-weight:600;font-size:14px;cursor:pointer;background:var(--accent);color:var(--accent-ink);transition:background .15s,opacity .15s}
+.btn:hover{background:var(--accent-h)}
+.btn:disabled{opacity:.6;cursor:wait}
+.btn.block{width:100%;margin-top:18px}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn.ghost:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.btn.sm{padding:6px 10px;font-size:12.5px;border-radius:8px}
+.btn.warn{background:var(--warn);color:#fff}
+.icon-btn{flex:none;width:42px;padding:0;height:42px}
+
+.row{display:flex;gap:8px;align-items:center}
+.row>.grow{flex:1;min-width:0}
+.hint{font-size:12.5px;color:var(--mute);margin-top:6px}
+.msg{font-size:13px;margin-top:12px;min-height:18px}
+.msg.err{color:var(--danger)}.msg.ok{color:var(--ok)}.msg.load{color:var(--mute)}
+.check{display:flex;align-items:center;gap:9px;font-size:13.5px;cursor:pointer;user-select:none}
+.check input{width:17px;height:17px;accent-color:var(--accent);cursor:pointer}
+.meter{height:4px;border-radius:4px;background:var(--line);margin-top:8px;overflow:hidden}
+.meter i{display:block;height:100%;width:0;transition:width .2s,background .2s}
+
+/* ---------- Login ---------- */
+#login{min-height:100vh;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.login-brand{background:var(--accent);color:var(--accent-ink);padding:48px;display:flex;flex-direction:column;justify-content:space-between}
+.login-brand .logo{background:var(--accent-ink);color:var(--accent)}
+.login-brand h2{font-size:34px;line-height:1.15;font-weight:800;letter-spacing:-.02em;max-width:14ch}
+.login-brand p{margin-top:14px;opacity:.85;max-width:38ch}
+.login-side{display:flex;align-items:center;justify-content:center;padding:32px 20px}
+.login-card{width:100%;max-width:380px}
+.login-card h1{font-size:24px;font-weight:800;letter-spacing:-.02em}
+.login-card .sub{color:var(--mute);margin-top:4px}
+.login-opts{display:flex;justify-content:space-between;align-items:center;margin-top:16px;gap:10px;flex-wrap:wrap}
+.link{background:none;border:0;color:var(--accent);font-weight:600;font-size:13px;cursor:pointer;padding:0}
+.link:hover{text-decoration:underline}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:16px;letter-spacing:-.01em}
+.logo{width:34px;height:34px;border-radius:9px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:800;font-size:16px}
+
+/* ---------- App ---------- */
+.topbar{position:sticky;top:0;z-index:10;background:var(--surface);border-bottom:1px solid var(--line)}
+.topbar .in{max-width:900px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.who{display:flex;align-items:center;gap:10px;min-width:0}
+.who span{color:var(--mute);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wrap{max-width:900px;margin:0 auto;padding:20px 16px 56px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-width:0}
+.stat span{font-size:12.5px;color:var(--mute)}
+.stat b{display:block;font-size:16px;font-weight:700;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:20px;overflow-x:auto}
+.tab{background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:10px 14px;font-weight:600;color:var(--mute);cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.tab:hover{color:var(--ink)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.pane{display:none}.pane.active{display:block}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;box-shadow:var(--shadow);margin-bottom:16px}
+.panel h2{font-size:16px;font-weight:700;letter-spacing:-.01em}
+.panel .desc{color:var(--mute);font-size:13px;margin-top:2px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+.cred{display:none;margin-top:14px;background:var(--accent-soft);border:1px solid var(--accent);border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.7;word-break:break-all;white-space:pre-wrap}
+.cred.on{display:block}
+
+details{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
+summary{cursor:pointer;font-weight:600;list-style:none;display:flex;align-items:center;gap:8px}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"\f054";font-family:"Font Awesome 6 Free";font-weight:900;font-size:10px;color:var(--mute);transition:transform .15s}
+details[open] summary::before{transform:rotate(90deg)}
+details>div{margin-top:12px}
+
+.toolbar{display:flex;gap:8px;margin:14px 0 4px}
+.users{max-height:420px;overflow-y:auto}
+.urow{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.urow:last-child{border:0}
+.avatar{flex:none;width:34px;height:34px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:700;font-size:13px}
+.uinfo{flex:1;min-width:0}
+.uinfo b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.uinfo small{color:var(--mute);font-size:12px}
+.uact{display:flex;gap:6px;flex:none}
+.empty{text-align:center;color:var(--mute);padding:28px 0}
+
+.maint{display:flex;justify-content:space-between;align-items:center;gap:14px}
+.switch{position:relative;display:inline-block;width:46px;height:26px;flex:none}
+.switch input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;z-index:1;margin:0}
+.slider{position:absolute;inset:0;background:var(--line);transition:.2s;border-radius:26px}
+.slider::before{content:"";position:absolute;height:20px;width:20px;left:3px;top:3px;background:#fff;transition:.2s;border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.switch input:checked+.slider{background:var(--danger)}
+.switch input:checked+.slider::before{transform:translateX(20px)}
+.switch input:focus-visible+.slider{outline:2px solid var(--accent);outline-offset:2px}
+
+.hist{max-height:480px;overflow-y:auto}
+.hrow{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.hrow:last-child{border:0}
+.hrow time{flex:none;width:104px;color:var(--mute);font-size:12.5px}
+.hrow div{min-width:0;overflow-wrap:anywhere}.hrow small{color:var(--mute)}
+
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(16px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:.2s;max-width:90vw;z-index:30}
+#toast.on{opacity:1;transform:translateX(-50%)}
+
+.badge{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:99px;margin-left:8px;vertical-align:middle;background:var(--accent-soft);color:var(--accent)}
+.badge.ban{background:rgba(192,57,43,.12);color:var(--danger)}
+.badge.exp{background:rgba(180,83,9,.14);color:var(--warn)}
+.badge.on{background:rgba(21,128,61,.14);color:var(--ok)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.chip{background:var(--field);border:1px solid var(--line);border-radius:99px;padding:4px 12px;font-size:12.5px;color:var(--mute)}
+.chip b{color:var(--ink);margin-right:4px}
+.frow{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.frow:last-child{border:0}.frow code{flex:1;min-width:0;overflow-wrap:anywhere;font-family:"JetBrains Mono",monospace;font-size:13px}
+.switch.ok input:checked+.slider{background:var(--accent)}
+.code{background:var(--field);border:1px solid var(--line);border-radius:10px;padding:14px;font-size:12.5px;line-height:1.7;overflow-x:auto;white-space:pre;margin-top:12px}
+.panel.danger{border-color:var(--danger)}
+.steps{margin:12px 0 0 18px;display:grid;gap:6px;font-size:13.5px}
+@media(max-width:860px){
+  #login{grid-template-columns:1fr}
+  .login-brand{display:none}
+}
+@media(max-width:560px){
+  .stats{grid-template-columns:1fr 1fr}
+  .grid2{grid-template-columns:1fr}
+  .panel{padding:18px}
+  .who span{display:none}
+  .urow{flex-wrap:wrap}.uact{width:100%;padding-left:46px}
+  .hrow time{width:84px}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* ---------- Dialog & dropdown kustom ---------- */
+.dlg-overlay{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(10,14,20,.5);backdrop-filter:blur(3px);opacity:0;transition:opacity .18s}
+.dlg-overlay.show{opacity:1}
+.dlg-card{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow);transform:translateY(10px) scale(.97);transition:transform .2s}
+.dlg-overlay.show .dlg-card{transform:none}
+.dlg-icon{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);margin-bottom:12px}
+.dlg-icon.danger{background:rgba(192,57,43,.12);color:var(--danger)}
+.dlg-title{font-size:16px;font-weight:800}.dlg-msg{margin-top:6px;font-size:13px;color:var(--mute);white-space:pre-line}
+.dlg-input{margin-top:14px;text-align:center;font-weight:700}
+.dlg-actions{display:flex;gap:10px;margin-top:20px}.dlg-actions .btn{flex:1}
+.btn.danger{background:var(--danger);color:#fff}
+.cs-wrap{position:relative;display:block;width:100%}
+.cs-native{position:absolute!important;opacity:0!important;pointer-events:none!important;width:1px!important;height:1px!important;left:0;bottom:0}
+.cs-btn{display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;cursor:pointer;width:100%}
+.cs-btn:hover{border-color:var(--accent)}
+.cs-btn[aria-expanded="true"]{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.cs-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cs-chev{width:16px;height:16px;color:var(--mute);flex:none;transition:transform .2s}
+.cs-btn[aria-expanded="true"] .cs-chev{transform:rotate(180deg);color:var(--accent)}
+.cs-menu{position:fixed;z-index:2100;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:5px;box-shadow:var(--shadow);max-height:240px;overflow-y:auto;opacity:0;transform:translateY(-4px);transition:opacity .14s,transform .14s}
+.cs-menu.show{opacity:1;transform:none}
+.cs-opt{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 11px;border-radius:8px;font-size:13.5px;font-weight:600;cursor:pointer}
+.cs-opt.active,.cs-opt:hover{background:var(--accent-soft)}
+.cs-opt[aria-selected="true"]{color:var(--accent);font-weight:700}
+.cs-opt svg{width:15px;height:15px;flex:none}
+.mrow{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);align-items:flex-start}
+.mrow:last-child{border:0}
+.mbody{flex:1;min-width:0;overflow-wrap:anywhere}
+.mbody small{color:var(--mute);font-size:12px;display:block}
+.mthumb{width:40px;height:40px;border-radius:8px;object-fit:cover;flex:none;background:var(--field)}
+.presets{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.badge.mut{background:rgba(180,83,9,.14);color:var(--warn)}
+
+</style>
+</head>
+<body>
+<div id="toast" role="status"></div>
+
+<!-- ================= LOGIN ================= -->
+<section id="login">
+  <div class="login-brand">
+    <div class="brand"><div class="logo">M</div>MariskaTools Moderator</div>
+    <div>
+      <h2>Kelola web chat dari satu tempat.</h2>
+      <p>Atur anggota, moderasi pesan dan cerita, mode maintenance, pengumuman, dan fitur tanpa membuka Firebase Console.</p>
+    </div>
+    <small>Khusus moderator</small>
+  </div>
+  <div class="login-side">
+    <form class="login-card" id="loginForm" autocomplete="on">
+      <div class="brand" style="margin-bottom:22px"><div class="logo">M</div>MariskaTools Moderator</div>
+      <h1>Masuk</h1>
+      <p class="sub">Gunakan akun moderator untuk membuka panel.</p>
+      <label class="lbl" for="lEmail">Email atau username</label>
+      <div class="field"><i class="fa-regular fa-envelope lead"></i><input class="input" id="lEmail" type="text" autocomplete="username" placeholder="mariskadm"></div>
+      <label class="lbl" for="lPass">Password</label>
+      <div class="field"><i class="fa-solid fa-lock lead"></i><input class="input has-trail" id="lPass" type="password" autocomplete="current-password" placeholder="Password"><button type="button" class="trail" id="lShow" aria-label="Tampilkan password"><i class="fa-solid fa-eye"></i></button></div>
+      <div class="login-opts">
+        <label class="check"><input type="checkbox" id="lRemember" checked> Ingat saya</label>
+        <button type="button" class="link" id="lForgot">Lupa password?</button>
+      </div>
+      <button class="btn block" id="lBtn" type="submit"><span>Masuk</span></button>
+      <p class="msg" id="lMsg"></p>
+    </form>
+  </div>
+</section>
+
+<!-- ================= APP ================= -->
+<div id="app" hidden>
+  <header class="topbar"><div class="in">
+    <div class="brand"><div class="logo">M</div>MariskaTools Moderator</div>
+    <div class="who"><span id="whoEmail">-</span><button class="btn ghost sm" id="logoutBtn" hidden><i class="fa-solid fa-right-from-bracket"></i> Keluar</button></div>
+  </div></header>
+
+  <main class="wrap">
+    <div class="stats">
+      <div class="stat"><span>Status web</span><b id="sMaint">-</b></div>
+      <div class="stat"><span>Versi terbaru</span><b id="sVer">-</b></div>
+      <div class="stat"><span>Pengumuman</span><b id="sAnn">-</b></div>
+      <div class="stat"><span>Online sekarang</span><b id="sOnline">0</b></div>
+    </div>
+
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-tab="members"><i class="fa-solid fa-user-group"></i> Anggota</button>
+      <button class="tab" data-tab="mod"><i class="fa-solid fa-shield-halved"></i> Moderasi</button>
+      <button class="tab" data-tab="ctrl"><i class="fa-solid fa-sliders"></i> Kontrol</button>
+      <button class="tab" data-tab="ses"><i class="fa-solid fa-signal"></i> Sesi</button>
+      <button class="tab" data-tab="hist"><i class="fa-solid fa-clock-rotate-left"></i> Riwayat</button>
+      <button class="tab" data-tab="int"><i class="fa-solid fa-plug"></i> Integrasi</button>
+    </div>
+
+    <!-- ===== ANGGOTA ===== -->
+    <section class="pane active" id="tab-members">
+      <div class="panel">
+        <h2>Tambah anggota</h2>
+        <p class="desc">Anggota masuk ke web chat dengan Google memakai email yang sama, lalu akunnya otomatis cocok dengan data di sini.</p>
+        <div class="grid2">
+          <div><label class="lbl" for="mName">Nama</label><input class="input" id="mName" placeholder="Contoh: Rian Pratama"></div>
+          <div><label class="lbl" for="mEmail">Email</label><input class="input" id="mEmail" type="email" placeholder="rian@email.com"></div>
+          <div><label class="lbl" for="mRole">Peran</label>
+            <select id="mRole"><option>Anggota</option><option>UI/UX Designer</option><option>Frontend Developer</option><option>Backend Developer</option><option>Project Manager</option><option>QA Engineer</option></select></div>
+          <div><label class="lbl" for="mDur">Masa aktif akun</label>
+            <select id="mDur"><option value="0">Tanpa batas</option><option value="1">1 hari</option><option value="7">7 hari</option><option value="30">30 hari</option><option value="90">90 hari</option><option value="365">1 tahun</option></select></div>
+        </div>
+        <button class="btn block" id="mAdd"><i class="fa-solid fa-user-plus"></i> Tambah anggota</button>
+        <p class="msg" id="mMsg"></p>
+        <details><summary>Tambah banyak anggota sekaligus</summary><div>
+          <p class="hint" style="margin-top:0">Satu anggota per baris dengan format <code class="mono">email,nama,peran</code> (nama dan peran boleh kosong). Maksimal 50 baris.</p>
+          <textarea id="bulkIn" class="mono" placeholder="rian@email.com,Rian Pratama,QA Engineer&#10;sari@email.com,Sari"></textarea>
+          <button class="btn block" id="bulkBtn"><i class="fa-solid fa-users"></i> Tambah semua</button>
+          <p class="msg" id="bulkMsg"></p>
+        </div></details>
+      </div>
+
+      <div class="panel">
+        <div class="row"><div class="grow"><h2>Daftar anggota</h2><p class="desc">Semua akun yang terdaftar di web chat. Diperbarui otomatis.</p></div>
+          <button class="btn ghost sm" id="usersCsv"><i class="fa-solid fa-download"></i> CSV</button></div>
+        <div class="chips" id="userChips"></div>
+        <div class="toolbar"><div class="field grow"><i class="fa-solid fa-magnifying-glass lead"></i><input class="input" id="userSearch" placeholder="Cari nama atau email"></div></div>
+        <div class="users" id="userList"><p class="empty">Memuat...</p></div>
+      </div>
+    </section>
+
+    <!-- ===== MODERASI ===== -->
+    <section class="pane" id="tab-mod">
+      <div class="panel">
+        <h2>Pesan terbaru</h2>
+        <p class="desc">200 pesan terakhir dari semua percakapan. Hapus pesan yang melanggar, perubahan langsung tampil di web chat.</p>
+        <div class="toolbar"><div class="field grow"><i class="fa-solid fa-magnifying-glass lead"></i><input class="input" id="msgSearch" placeholder="Cari isi pesan atau nama pengirim"></div>
+          <div style="width:150px"><select id="msgFil"><option value="">Semua</option><option value="text">Teks</option><option value="photo">Foto</option></select></div></div>
+        <div class="users" id="msgList" style="max-height:520px"><p class="empty">Memuat...</p></div>
+      </div>
+      <div class="panel">
+        <h2>Cerita aktif</h2>
+        <p class="desc">Cerita yang masih tayang (24 jam terakhir).</p>
+        <div class="users" id="storyList"><p class="empty">Memuat...</p></div>
+      </div>
+    </section>
+
+    <!-- ===== KONTROL ===== -->
+    <section class="pane" id="tab-ctrl">
+      <div class="panel">
+        <div class="maint"><div><h2>Mode maintenance</h2><p class="desc" id="maintStatusText">Status: normal</p></div>
+          <label class="switch"><input type="checkbox" id="maintToggle" aria-label="Mode maintenance"><span class="slider"></span></label></div>
+        <label class="lbl" for="maintMsg">Pesan untuk pengguna</label>
+        <textarea id="maintMsg" placeholder="Kami sedang melakukan perawatan. Silakan kembali beberapa saat lagi."></textarea>
+        <button class="btn block" id="maintMsgSave">Simpan pesan</button>
+      </div>
+
+      <div class="panel">
+        <h2>Pengumuman</h2>
+        <p class="desc">Aktif sekarang: <span id="annNow">tidak ada</span></p>
+        <label class="lbl" for="broadcastInput">Isi pengumuman</label>
+        <textarea id="broadcastInput" placeholder="Tulis pengumuman untuk semua pengguna..."></textarea>
+        <label class="lbl" for="annType">Tampilan</label>
+        <select id="annType"><option value="info">Info (biru)</option><option value="warning">Peringatan (kuning)</option><option value="danger">Penting (merah)</option></select>
+        <div class="row" style="margin-top:18px"><button class="btn grow" id="btnBroadcast"><i class="fa-solid fa-bullhorn"></i> Kirim pengumuman</button><button class="btn ghost" id="btnClearAnn">Hapus</button></div>
+      </div>
+
+      <div class="panel">
+        <h2>Fitur web (feature flag)</h2>
+        <p class="desc">Nyalakan atau matikan fitur di web chat kapan saja tanpa mengubah kode. Fitur yang dimatikan langsung hilang dari tampilan pengguna.</p>
+        <div class="row" style="margin-top:14px"><input class="input grow" id="flagKey" placeholder="nama_fitur" maxlength="30"><button class="btn" id="flagAdd">Tambah</button></div>
+        <div class="presets" id="flagPresets"></div>
+        <div id="flagList" style="margin-top:8px"><p class="empty">Belum ada fitur.</p></div>
+      </div>
+
+      <div class="panel">
+        <h2>Versi web</h2>
+        <p class="desc">Pengguna dengan versi lebih lama akan diminta memuat ulang atau membuka tautan pembaruan.</p>
+        <div class="grid2">
+          <div><label class="lbl" for="versionInput">Versi</label><input class="input" id="versionInput" placeholder="1.1.0"></div>
+          <div><label class="lbl" for="urlInput">Link pembaruan (opsional)</label><input class="input" id="urlInput" placeholder="https://"></div>
+        </div>
+        <label class="lbl" for="changelogInput">Catatan perubahan</label>
+        <textarea id="changelogInput" placeholder="Apa yang baru di versi ini..."></textarea>
+        <label class="check" style="margin-top:14px"><input type="checkbox" id="forceInput"> Wajib update, pengguna tidak bisa melewati</label>
+        <button class="btn block" id="btnUpdateVersion">Simpan versi</button>
+      </div>
+
+      <div class="panel danger">
+        <h2>Paksa semua pengguna login ulang</h2>
+        <p class="desc">Semua pengguna akan keluar dari web chat dan harus masuk lagi. Berguna setelah ganti kebijakan atau ada akun bocor.</p>
+        <button class="btn warn block" id="forceLogoutBtn"><i class="fa-solid fa-power-off"></i> Paksa logout semua</button>
+      </div>
+    </section>
+
+    <!-- ===== SESI ===== -->
+    <section class="pane" id="tab-ses">
+      <div class="panel">
+        <h2>Sesi anggota</h2>
+        <p class="desc">Anggota dianggap online jika web chat terbuka dalam 90 detik terakhir. Diperbarui otomatis.</p>
+        <div class="chips"><span class="chip"><b id="sesOnline">0</b>Online sekarang</span><span class="chip"><b id="sesTotal">0</b>Pernah aktif</span></div>
+        <div class="toolbar"><div class="field grow"><i class="fa-solid fa-magnifying-glass lead"></i><input class="input" id="sesSearch" placeholder="Cari nama atau email"></div>
+          <div style="width:150px"><select id="sesFil"><option value="">Semua</option><option value="online">Online saja</option></select></div></div>
+        <div class="users" id="sesList"><p class="empty">Memuat...</p></div>
+      </div>
+    </section>
+
+    <!-- ===== RIWAYAT ===== -->
+    <section class="pane" id="tab-hist">
+      <div class="panel">
+        <div class="row"><div class="grow"><h2>Riwayat aktivitas</h2><p class="desc">100 aktivitas moderator terakhir, tersimpan di cloud.</p></div>
+          <div style="width:150px"><select id="fil"><option value="">Semua</option><option value="akun">Anggota</option><option value="moderasi">Moderasi</option><option value="sistem">Pengaturan</option></select></div>
+          <button class="btn ghost sm" id="csv"><i class="fa-solid fa-download"></i> CSV</button></div>
+        <div class="hist" id="histList" style="margin-top:10px"><p class="empty">Belum ada aktivitas.</p></div>
+      </div>
+    </section>
+
+    <!-- ===== INTEGRASI ===== -->
+    <section class="pane" id="tab-int">
+      <div class="panel">
+        <h2>Cara web chat membaca panel ini</h2>
+        <p class="desc">Panel dan web chat memakai satu proyek Firebase (<span class="mono">mariskaratnadewi</span>), jadi semua perubahan tersinkron langsung.</p>
+        <div class="row" style="margin-top:12px"><span class="hint grow" style="margin:0">Struktur data</span><button class="btn ghost sm" id="schemaCopy"><i class="fa-regular fa-copy"></i> Salin</button></div>
+<pre class="code" id="schemaCode">system/config  (Firestore)
+  maintenance: boolean
+  maintenanceMessage: string
+  announcement: string
+  announcementType: "info" | "warning" | "danger"
+  version: string
+  updateUrl: string
+  changelog: string
+  forceUpdate: boolean
+  forceLogoutAt: waktu ISO (string)
+  flags: { namaFitur: boolean }
+
+users/{id}  (Firestore, ditulis web chat + panel)
+  id, name, email, role, color, bio, photo, joinedAt
+  banned: boolean      (panel)
+  muted: boolean       (panel)
+  expiresAt: waktu ISO atau null  (panel)
+
+presence/{id}  (Firestore, ditulis web chat)
+  online: boolean, lastSeen: Timestamp
+
+logs/{auto}  (Firestore, ditulis panel)
+  type, action, detail, admin, time
+
+messages/{id}, stories/{id}, media/{id}  (Realtime Database)</pre>
+      </div>
+
+      <div class="panel">
+        <h2>Aturan keamanan yang disarankan</h2>
+        <p class="desc">Tempel di Firebase Console, bagian Firestore Database lalu Rules. Ganti email dengan email moderator Anda.</p>
+        <div class="row" style="margin-top:12px"><span class="hint grow" style="margin:0">Firestore rules</span><button class="btn ghost sm" id="rulesCopy"><i class="fa-regular fa-copy"></i> Salin</button></div>
+<pre class="code" id="rulesCode">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isMod() {
+      return request.auth != null
+        &amp;&amp; request.auth.token.email in ['mariskadm@mariskatools.app'];
+    }
+    match /system/{doc} {
+      allow read: if request.auth != null;
+      allow write: if isMod();
+    }
+    match /logs/{id} { allow read, write: if isMod(); }
+    match /presence/{id} { allow read, write: if request.auth != null; }
+    match /users/{id} {
+      allow read: if request.auth != null;
+      allow create: if isMod() || (request.auth != null
+        &amp;&amp; !request.resource.data.keys().hasAny(['banned','muted','expiresAt']));
+      allow update: if isMod() || (request.auth != null
+        &amp;&amp; !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['banned','muted','expiresAt']));
+      allow delete: if isMod();
+    }
+  }
+}</pre>
+      </div>
+
+      <div class="panel">
+        <h2>Yang perlu disiapkan</h2>
+        <ol class="steps">
+          <li>Di Firebase Console proyek ini, buka Authentication, Sign-in method, lalu aktifkan <b>Email/Password</b>.</li>
+          <li>Di Authentication, Users, klik Add user: email <span class="mono">mariskadm@mariskatools.app</span> dengan password akun moderator. Di halaman login cukup ketik <span class="mono">mariskadm</span>.</li>
+          <li>Pastikan Realtime Database mengizinkan moderator menghapus <span class="mono">messages</span>, <span class="mono">stories</span>, dan <span class="mono">media</span>.</li>
+          <li>Tambahkan domain tempat panel ini di-host ke Authentication, Settings, Authorized domains.</li>
+        </ol>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, setPersistence, browserLocalPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, addDoc, query, orderBy, limit, updateDoc, deleteField } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { getDatabase, ref, onValue, get, update, query as rtQuery, limitToLast } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+
+// Isi dengan email moderator yang sudah dibuat di Firebase Authentication.
+const REQUIRE_ADMIN_LOGIN = true;
+const ADMIN_EMAILS = ["mariskadm@mariskatools.app"];
+// Username tanpa "@" otomatis dilengkapi domain ini (mariskadm -> mariskadm@mariskatools.app).
+const LOGIN_DOMAIN = "mariskatools.app";
+const toEmail = v => { v = (v || "").trim().toLowerCase(); return v && !v.includes("@") ? v + "@" + LOGIN_DOMAIN : v; };
+
+// Proyek yang sama dengan web chat, supaya data langsung tersinkron.
+const firebaseConfig = {
+    apiKey: "AIzaSyCrjc93q2BDW8654WzktcpxWK-JalUEYhU",
+    authDomain: "mariskaratnadewi.firebaseapp.com",
+    databaseURL: "https://mariskaratnadewi-default-rtdb.firebaseio.com",
+    projectId: "mariskaratnadewi",
+    storageBucket: "mariskaratnadewi.firebasestorage.app",
+    messagingSenderId: "28759941317",
+    appId: "1:28759941317:web:8210444cd41fb9182a90ac"
+};
+
+// Nama instance khusus agar sesi moderator tidak bentrok dengan sesi anonim web chat di domain yang sama.
+const app = initializeApp(firebaseConfig, "moderator");
+const auth = getAuth(app), db = getFirestore(app), rdb = getDatabase(app);
+const configDocRef = doc(db, "system", "config");
+
+const $ = id => document.getElementById(id);
+let adminEmail = "panel", unsubs = [], logs = [], users = [], presence = {}, msgs = [], stories = [], flags = {}, filled = false;
+const PRESENCE_MS = 90000;
+const COLORS = ["#4F46E5", "#ec4899", "#10b981", "#f59e0b", "#0ea5e9"];
+const PRESETS = [["tugas", "Halaman Tugas"], ["ruang", "Ruang bersama"], ["catatan", "Catatan"], ["foto_chat", "Kirim foto di chat"]];
+
+/* ---------- Util ---------- */
+function toast(t){const e=$("toast");e.textContent=t;e.classList.add("on");clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove("on"),2800)}
+function setMsg(el,cls,text){el.className="msg "+cls;el.textContent=text}
+const fmt = v => {const d=new Date(v);return isNaN(d)?"-":d.toLocaleString("id-ID",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})};
+const dShort = v => new Date(v).toLocaleDateString("id-ID",{day:"2-digit",month:"short",year:"numeric"});
+function ago(v){
+    const t=new Date(v); if(!v||isNaN(t)) return "-";
+    const s=Math.max(0,Math.floor((Date.now()-t)/1000));
+    if(s<60) return "baru saja"; if(s<3600) return Math.floor(s/60)+" menit lalu";
+    if(s<86400) return Math.floor(s/3600)+" jam lalu"; return Math.floor(s/86400)+" hari lalu";
+}
+const store = {
+    get(k){try{return localStorage.getItem(k)}catch(e){return null}},
+    set(k,v){try{localStorage.setItem(k,v)}catch(e){}},
+    del(k){try{localStorage.removeItem(k)}catch(e){}}
+};
+async function record(type,action,detail){
+    try{await addDoc(collection(db,"logs"),{type,action,detail:detail||"",admin:adminEmail,time:new Date().toISOString()})}catch(e){}
+}
+function toggleEye(input,btn){
+    const hide=input.type==="password"; input.type=hide?"text":"password";
+    btn.firstElementChild.className=hide?"fa-solid fa-eye-slash":"fa-solid fa-eye";
+}
+const esc = s => String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function download(name,rows){
+    const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
+    const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([rows.map(r=>r.map(q).join(",")).join("\n")],{type:"text/csv"}));
+    a.download=name; a.click(); URL.revokeObjectURL(a.href);
+}
+const userName = id => { const u=users.find(x=>x.id===id); return u?(u.name||u.email):(id==="general"?"Saluran umum":id||"-") };
+
+/* ---------- Dialog kustom ---------- */
+function openDialog(o){
+    return new Promise(resolve=>{
+        const prev=document.activeElement, ov=document.createElement("div"); ov.className="dlg-overlay";
+        ov.innerHTML='<div class="dlg-card" role="dialog" aria-modal="true"><div class="dlg-icon'+(o.danger?' danger':'')+'"><i class="fa-solid '+(o.icon||"fa-circle-question")+'"></i></div>'
+            +'<div class="dlg-title">'+esc(o.title)+'</div>'+(o.message?'<div class="dlg-msg">'+esc(o.message)+'</div>':'')
+            +(o.input?'<input class="input dlg-input" type="text" autocomplete="off" value="'+esc(o.value||"")+'" placeholder="'+esc(o.placeholder||"")+'"'+(o.numeric?' inputmode="numeric"':'')+'>':'')
+            +'<div class="dlg-actions"><button class="btn ghost" data-r="0">Batal</button><button class="btn'+(o.danger?' danger':'')+'" data-r="1">'+esc(o.okText||"OK")+'</button></div></div>';
+        document.body.appendChild(ov);
+        const inp=ov.querySelector("input");
+        requestAnimationFrame(()=>{ov.classList.add("show");(inp||ov.querySelector('[data-r="1"]')).focus(); if(inp) inp.select()});
+        const close=ok=>{document.removeEventListener("keydown",key,true);ov.classList.remove("show");setTimeout(()=>ov.remove(),180);try{prev&&prev.focus()}catch(e){}resolve(o.input?(ok?inp.value:null):!!ok)};
+        const key=e=>{if(e.key==="Escape"){e.preventDefault();close(false)}else if(e.key==="Enter"&&(!document.activeElement||document.activeElement.dataset.r!=="0")){e.preventDefault();close(true)}};
+        document.addEventListener("keydown",key,true);
+        ov.addEventListener("mousedown",e=>{if(e.target===ov)close(false)});
+        ov.querySelectorAll("[data-r]").forEach(b=>b.addEventListener("click",()=>close(b.dataset.r==="1")));
+    });
+}
+const appConfirm=(title,message,okText,danger)=>openDialog({title,message,okText:okText||"Ya, lanjut",danger,icon:danger?"fa-triangle-exclamation":"fa-circle-question"});
+const appPrompt=(title,message,value,okText)=>openDialog({title,message,value,okText:okText||"Simpan",input:true,numeric:true,icon:"fa-calendar-plus"});
+
+/* ---------- Dropdown kustom ---------- */
+const CHEV='<svg class="cs-chev" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7.5l5 5 5-5"/></svg>';
+const CHECK='<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5l3.5 3.5 7.5-8"/></svg>';
+let openMenu=null;
+function closeMenu(){ if(!openMenu) return; const {menu,btn}=openMenu; openMenu=null; btn.setAttribute("aria-expanded","false"); menu.classList.remove("show"); setTimeout(()=>menu.remove(),140) }
+document.addEventListener("mousedown",e=>{ if(openMenu&&!openMenu.menu.contains(e.target)&&!openMenu.btn.contains(e.target)) closeMenu() });
+window.addEventListener("resize",closeMenu);
+window.addEventListener("scroll",e=>{ if(openMenu&&!openMenu.menu.contains(e.target)) closeMenu() },true);
+function enhance(sel){
+    if(sel.dataset.cs) return; sel.dataset.cs="1";
+    const wrap=document.createElement("div"); wrap.className="cs-wrap"; sel.parentNode.insertBefore(wrap,sel); wrap.appendChild(sel);
+    sel.classList.add("cs-native"); sel.tabIndex=-1; sel.setAttribute("aria-hidden","true");
+    const btn=document.createElement("button"); btn.type="button"; btn.className="input cs-btn";
+    btn.setAttribute("aria-haspopup","listbox"); btn.setAttribute("aria-expanded","false"); wrap.appendChild(btn);
+    const paint=()=>{ const o=sel.options[sel.selectedIndex]; btn.innerHTML='<span class="cs-label">'+(o?esc(o.text):"")+'</span>'+CHEV };
+    paint();
+    function pick(i){ if(sel.selectedIndex!==i){ sel.selectedIndex=i; sel.dispatchEvent(new Event("change",{bubbles:true})) } paint(); closeMenu(); btn.focus() }
+    function openList(){
+        closeMenu();
+        const menu=document.createElement("div"); menu.className="cs-menu"; menu.setAttribute("role","listbox");
+        Array.from(sel.options).forEach((o,i)=>{
+            const it=document.createElement("div"); it.className="cs-opt"; it.setAttribute("role","option"); it.dataset.i=i;
+            it.setAttribute("aria-selected",i===sel.selectedIndex?"true":"false");
+            it.innerHTML='<span>'+esc(o.text)+'</span>'+(i===sel.selectedIndex?CHECK:"");
+            it.addEventListener("mouseenter",()=>{menu.querySelectorAll(".active").forEach(a=>a.classList.remove("active"));it.classList.add("active")});
+            it.addEventListener("click",()=>pick(i)); menu.appendChild(it);
+        });
+        document.body.appendChild(menu);
+        const r=btn.getBoundingClientRect(); menu.style.minWidth=r.width+"px"; menu.style.left=r.left+"px";
+        const h=Math.min(menu.scrollHeight,240), below=innerHeight-r.bottom;
+        if(below<h+12&&r.top>below) menu.style.bottom=(innerHeight-r.top+6)+"px"; else menu.style.top=(r.bottom+6)+"px";
+        requestAnimationFrame(()=>menu.classList.add("show")); btn.setAttribute("aria-expanded","true"); openMenu={menu,btn};
+        const cur=menu.querySelector('[aria-selected="true"]'); if(cur){cur.classList.add("active");cur.scrollIntoView({block:"nearest"})}
+    }
+    function move(d){
+        if(!openMenu) return openList();
+        const items=Array.from(openMenu.menu.children); let idx=items.findIndex(x=>x.classList.contains("active"));
+        idx=Math.max(0,Math.min(items.length-1,(idx<0?sel.selectedIndex:idx)+d));
+        items.forEach(x=>x.classList.remove("active")); items[idx].classList.add("active"); items[idx].scrollIntoView({block:"nearest"});
+    }
+    btn.addEventListener("click",()=>(openMenu&&openMenu.btn===btn)?closeMenu():openList());
+    btn.addEventListener("keydown",e=>{
+        if(e.key==="ArrowDown"){e.preventDefault();move(1)} else if(e.key==="ArrowUp"){e.preventDefault();move(-1)}
+        else if(e.key==="Escape"&&openMenu){e.stopPropagation();closeMenu()}
+        else if((e.key==="Enter"||e.key===" ")&&openMenu){e.preventDefault();const a=openMenu.menu.querySelector(".active");a?pick(+a.dataset.i):closeMenu()}
+    });
+    new MutationObserver(paint).observe(sel,{childList:true,subtree:true,characterData:true});
+    ["value","selectedIndex"].forEach(k=>{
+        const d=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,k);
+        if(d&&d.set) Object.defineProperty(sel,k,{configurable:true,get(){return d.get.call(this)},set(v){d.set.call(this,v);paint()}});
+    });
+}
+document.querySelectorAll("select").forEach(enhance);
+
+/* ---------- Tabs ---------- */
+document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>{
+    document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t===b));
+    document.querySelectorAll(".pane").forEach(c=>c.classList.toggle("active",c.id==="tab-"+b.dataset.tab));
+}));
+
+/* ---------- Listener realtime ---------- */
+const failBox=(id,txt)=>()=>{ $(id).innerHTML='<p class="empty">'+txt+'</p>' };
+function start(){
+    unsubs.forEach(u=>u()); unsubs=[]; filled=false;
+    unsubs.push(onSnapshot(configDocRef, snap=>{
+        const d=snap.exists()?snap.data():{}, m=d.maintenance===true;
+        $("maintToggle").checked=m;
+        $("maintStatusText").textContent=m?"Status: maintenance, pengguna diblokir":"Status: normal, web aktif";
+        $("sMaint").textContent=m?"Maintenance":"Normal"; $("sMaint").style.color=m?"var(--danger)":"var(--ok)";
+        $("sVer").textContent=d.version?"v"+d.version:"Belum diatur";
+        $("sAnn").textContent=d.announcement?"Aktif":"Tidak ada";
+        $("annNow").textContent=d.announcement?'"'+d.announcement+'"':"tidak ada";
+        flags=d.flags||{}; renderFlags();
+        if(!filled){filled=true;$("versionInput").value=d.version||"";$("urlInput").value=d.updateUrl||"";$("changelogInput").value=d.changelog||"";$("forceInput").checked=d.forceUpdate===true;$("maintMsg").value=d.maintenanceMessage||"";$("annType").value=d.announcementType||"info"}
+    }, ()=>toast("Gagal membaca pengaturan. Periksa aturan Firestore.")));
+    unsubs.push(onSnapshot(query(collection(db,"logs"),orderBy("time","desc"),limit(100)), s=>{logs=s.docs.map(d=>d.data());renderHist()}, ()=>{}));
+    unsubs.push(onSnapshot(collection(db,"users"), s=>{
+        users=s.docs.map(d=>({...d.data(),id:d.id})).sort((a,b)=>(b.joinedAt||0)-(a.joinedAt||0));
+        renderUsers(); renderSessions(); renderMsgs(); renderStories();
+    }, failBox("userList",'Daftar anggota tidak bisa dibaca. Periksa aturan Firestore untuk koleksi "users".')));
+    unsubs.push(onSnapshot(collection(db,"presence"), s=>{
+        presence={}; s.docs.forEach(d=>{const v=d.data(); presence[d.id]={online:!!v.online,lastSeen:v.lastSeen&&v.lastSeen.toMillis?v.lastSeen.toMillis():0}});
+        renderSessions(); renderUsers();
+    }, failBox("sesList",'Data sesi tidak bisa dibaca. Periksa aturan Firestore untuk koleksi "presence".')));
+    unsubs.push(onValue(rtQuery(ref(rdb,"messages"),limitToLast(200)), s=>{
+        msgs=[]; s.forEach(c=>{const v=c.val(); if(v&&typeof v==="object") msgs.push({...v,id:c.key})});
+        msgs.sort((a,b)=>(b.ts||0)-(a.ts||0)); renderMsgs();
+    }, failBox("msgList","Pesan tidak bisa dibaca. Periksa aturan Realtime Database.")));
+    unsubs.push(onValue(ref(rdb,"stories"), s=>{
+        stories=[]; s.forEach(c=>{const v=c.val(); if(v&&typeof v==="object") stories.push({...v,id:c.key})});
+        stories=stories.filter(x=>(x.ts||0)>Date.now()-864e5).sort((a,b)=>(b.ts||0)-(a.ts||0)); renderStories();
+    }, failBox("storyList","Cerita tidak bisa dibaca. Periksa aturan Realtime Database.")));
+}
+
+/* ---------- Riwayat ---------- */
+function renderHist(){
+    const f=$("fil").value, box=$("histList"), rows=logs.filter(l=>!f||l.type===f);
+    box.replaceChildren();
+    if(!rows.length){box.innerHTML='<p class="empty">Belum ada aktivitas.</p>';return}
+    rows.forEach(l=>{
+        const r=document.createElement("div"); r.className="hrow";
+        const t=document.createElement("time"); t.textContent=fmt(l.time);
+        const c=document.createElement("div"); c.textContent=(l.action||"-")+(l.detail?": "+l.detail:"");
+        const s=document.createElement("small"); s.textContent=l.admin?" oleh "+l.admin:""; c.append(s);
+        r.append(t,c); box.append(r);
+    });
+}
+$("fil").addEventListener("change",renderHist);
+$("csv").addEventListener("click",()=>{
+    if(!logs.length) return toast("Belum ada data untuk diekspor.");
+    download("riwayat-moderator.csv",[["waktu","jenis","aksi","detail","moderator"],...logs.map(l=>[l.time,l.type,l.action,l.detail,l.admin])]);
+});
+
+/* ---------- Kontrol ---------- */
+const saveCfg=async(data,okLog,okToast,failToast,detail)=>{
+    try{ await setDoc(configDocRef,data,{merge:true}); if(okLog) record("sistem",okLog,detail); if(okToast) toast(okToast); return true }
+    catch(e){ toast(failToast); return false }
+};
+$("maintToggle").addEventListener("change", async ()=>{
+    const state=$("maintToggle").checked;
+    if(!await saveCfg({maintenance:state},"Mode maintenance",state?"Mode maintenance aktif":"Web kembali normal","Gagal mengubah mode maintenance.",state?"Diaktifkan":"Dimatikan")) $("maintToggle").checked=!state;
+});
+$("maintMsgSave").addEventListener("click",()=>saveCfg({maintenanceMessage:$("maintMsg").value.trim()},"Pesan maintenance diubah","Pesan tersimpan","Gagal menyimpan pesan."));
+$("btnBroadcast").addEventListener("click", async ()=>{
+    const msg=$("broadcastInput").value.trim();
+    if(!msg) return toast("Pesan pengumuman masih kosong.");
+    if(await saveCfg({announcement:msg,announcementType:$("annType").value},"Pengumuman dikirim","Pengumuman terkirim ke semua pengguna","Gagal mengirim pengumuman.",msg)) $("broadcastInput").value="";
+});
+$("btnClearAnn").addEventListener("click",()=>saveCfg({announcement:""},"Pengumuman dihapus","Pengumuman dihapus","Gagal menghapus pengumuman."));
+$("btnUpdateVersion").addEventListener("click", async ()=>{
+    const version=$("versionInput").value.trim().replace(/^v/i,""), url=$("urlInput").value.trim();
+    if(!version) return toast("Versi wajib diisi.");
+    if(!/^\d+(\.\d+){0,3}$/.test(version)) return toast("Versi harus berupa angka, contoh 1.1.0");
+    if(url&&!/^https:\/\//i.test(url)) return toast("Link harus diawali https://");
+    saveCfg({version,updateUrl:url,changelog:$("changelogInput").value.trim(),forceUpdate:$("forceInput").checked},"Versi diperbarui","Versi tersimpan","Gagal menyimpan versi.","v"+version+($("forceInput").checked?" (wajib)":""));
+});
+$("forceLogoutBtn").addEventListener("click", async ()=>{
+    if(!await appConfirm("Paksa semua keluar?","Semua pengguna akan dipaksa login ulang.","Paksa logout",true)) return;
+    saveCfg({forceLogoutAt:new Date().toISOString()},"Paksa logout semua pengguna","Perintah logout terkirim","Gagal mengirim perintah.");
+});
+
+/* ---------- Feature flag ---------- */
+function renderFlags(){
+    const box=$("flagList"), keys=Object.keys(flags).sort(); box.replaceChildren();
+    $("flagPresets").innerHTML=PRESETS.filter(p=>!(p[0] in flags)).map(p=>'<button class="btn ghost sm" data-k="'+p[0]+'">+ '+esc(p[1])+'</button>').join("");
+    $("flagPresets").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>addFlag(b.dataset.k,true)));
+    if(!keys.length){box.innerHTML='<p class="empty">Belum ada fitur. Tambahkan nama fitur di atas.</p>';return}
+    keys.forEach(k=>{
+        const p=PRESETS.find(x=>x[0]===k);
+        const r=document.createElement("div"); r.className="frow";
+        const code=document.createElement("code"); code.textContent=k+(p?"  ("+p[1]+")":"");
+        const sw=document.createElement("label"); sw.className="switch ok";
+        const inp=document.createElement("input"); inp.type="checkbox"; inp.checked=flags[k]===true; inp.setAttribute("aria-label","Fitur "+k);
+        const sl=document.createElement("span"); sl.className="slider"; sw.append(inp,sl);
+        inp.addEventListener("change", async ()=>{ if(!await saveCfg({flags:{[k]:inp.checked}},"Fitur "+k,"","Gagal mengubah fitur.",inp.checked?"Dinyalakan":"Dimatikan")) inp.checked=!inp.checked });
+        const del=document.createElement("button"); del.className="btn ghost sm"; del.innerHTML='<i class="fa-solid fa-trash"></i>'; del.setAttribute("aria-label","Hapus fitur "+k);
+        del.addEventListener("click", async ()=>{
+            if(!await appConfirm("Hapus fitur "+k+"?","Fitur ini akan kembali aktif di web chat.","Hapus",true)) return;
+            try{ await updateDoc(configDocRef,{["flags."+k]:deleteField()}); record("sistem","Fitur dihapus",k) } catch(e){ toast("Gagal menghapus fitur.") }
+        });
+        r.append(code,sw,del); box.append(r);
+    });
+}
+async function addFlag(k,on){
+    if(!/^[A-Za-z][A-Za-z0-9_]{1,29}$/.test(k)) return toast("Nama fitur: diawali huruf, hanya huruf/angka/_, 2-30 karakter.");
+    if(k in flags) return toast("Fitur itu sudah ada.");
+    if(await saveCfg({flags:{[k]:on}},"Fitur ditambahkan","","Gagal menambah fitur.",k)) $("flagKey").value="";
+}
+$("flagAdd").addEventListener("click",()=>addFlag($("flagKey").value.trim(),false));
+
+/* ---------- Anggota ---------- */
+async function addMember(email,name,role,days){
+    email=(email||"").trim().toLowerCase();
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("format email tidak valid");
+    if(users.some(u=>(u.email||"").toLowerCase()===email)) throw new Error("email sudah terdaftar");
+    const id="user_"+Date.now()+Math.random().toString(36).slice(2,6);
+    await setDoc(doc(db,"users",id),{id,name:(name||email.split("@")[0]).trim(),email,role:role||"Anggota",color:COLORS[users.length%COLORS.length],joinedAt:Date.now(),banned:false,muted:false,expiresAt:days?new Date(Date.now()+days*864e5).toISOString():null,createdBy:adminEmail});
+    users.push({id,email}); // cegah duplikat dalam satu proses
+}
+$("mAdd").addEventListener("click", async ()=>{
+    const st=$("mMsg"), email=$("mEmail").value.trim();
+    if(!email) return setMsg(st,"err","Email wajib diisi.");
+    setMsg(st,"load","Menambahkan..."); $("mAdd").disabled=true;
+    try{
+        await addMember(email,$("mName").value,$("mRole").value,parseInt($("mDur").value)||0);
+        record("akun","Anggota ditambahkan",email);
+        setMsg(st,"ok","Anggota ditambahkan. Mereka bisa masuk dengan Google memakai email ini.");
+        $("mName").value=""; $("mEmail").value="";
+    }catch(e){ setMsg(st,"err","Gagal: "+(e.message||"periksa aturan Firestore")) }
+    $("mAdd").disabled=false;
+});
+$("bulkBtn").addEventListener("click", async ()=>{
+    const lines=$("bulkIn").value.split("\n").map(l=>l.trim()).filter(Boolean), msg=$("bulkMsg");
+    if(!lines.length) return setMsg(msg,"err","Isi daftar anggota dulu.");
+    if(lines.length>50) return setMsg(msg,"err","Maksimal 50 anggota sekali proses.");
+    $("bulkBtn").disabled=true; let ok=0; const fail=[], days=parseInt($("mDur").value)||0;
+    for(let i=0;i<lines.length;i++){
+        const [email,name,role]=lines[i].split(",").map(s=>(s||"").trim());
+        setMsg(msg,"load",`Memproses ${i+1} dari ${lines.length}...`);
+        try{ await addMember(email,name,role,days); ok++ } catch(e){ fail.push((email||"?")+" ("+(e.message||"gagal")+")") }
+    }
+    setMsg(msg,fail.length?"err":"ok",`Selesai: ${ok} berhasil, ${fail.length} gagal.`+(fail.length?" Gagal: "+fail.join("; "):""));
+    if(ok) record("akun","Tambah anggota massal",ok+" anggota");
+    if(!fail.length) $("bulkIn").value="";
+    $("bulkBtn").disabled=false;
+});
+
+const isOnline = id => { const p=presence[id]; return !!(p&&p.online&&Date.now()-p.lastSeen<PRESENCE_MS) };
+function userStatus(u){
+    if(u.banned) return ["Diblokir","ban"];
+    if(u.expiresAt && new Date(u.expiresAt)<new Date()) return ["Kedaluwarsa","exp"];
+    if(isOnline(u.id)) return ["Online","on"];
+    return ["Aktif",""];
+}
+async function patchUser(u,data,logAction){
+    try{ await setDoc(doc(db,"users",u.id),data,{merge:true}); record("akun",logAction,u.email); toast("Tersimpan") }
+    catch(e){ toast("Gagal menyimpan. Periksa aturan Firestore.") }
+}
+async function deleteMsgs(ids){
+    const ups={}; ids.forEach(id=>{ups["messages/"+id]=null; ups["media/"+id]=null});
+    await update(ref(rdb),ups);
+}
+function renderUsers(){
+    const q=$("userSearch").value.trim().toLowerCase(), box=$("userList");
+    const rows=users.filter(u=>u.email&&(!q||(u.email||"").toLowerCase().includes(q)||(u.name||"").toLowerCase().includes(q)));
+    const c={ban:0,exp:0,on:0}; users.forEach(u=>{const k=userStatus(u)[1]; if(k) c[k]++});
+    $("sOnline").textContent=users.filter(u=>isOnline(u.id)).length;
+    $("userChips").innerHTML=`<span class="chip"><b>${users.length}</b>Total</span><span class="chip"><b>${c.on}</b>Online</span><span class="chip"><b>${c.exp}</b>Kedaluwarsa</span><span class="chip"><b>${c.ban}</b>Diblokir</span>`;
+    box.replaceChildren();
+    if(!rows.length){box.innerHTML=`<p class="empty">${users.length?"Tidak ada anggota yang cocok.":"Belum ada anggota."}</p>`;return}
+    rows.forEach(u=>{
+        const [label,cls]=userStatus(u);
+        const r=document.createElement("div"); r.className="urow";
+        const av=document.createElement("div"); av.className="avatar"; av.textContent=((u.name||u.email||"?")[0]||"?").toUpperCase();
+        const info=document.createElement("div"); info.className="uinfo";
+        const b=document.createElement("b"); b.textContent=u.name||u.email;
+        const bd=document.createElement("span"); bd.className="badge "+cls; bd.textContent=label; b.append(bd);
+        if(u.muted){const m=document.createElement("span"); m.className="badge mut"; m.textContent="Dibungkam"; b.append(m)}
+        const sm=document.createElement("small");
+        sm.textContent=(u.name?u.email+" · ":"")+(u.role||"Anggota")+" · "+(u.expiresAt?"Berlaku sampai "+dShort(u.expiresAt):"Tanpa batas");
+        info.append(b,sm);
+        const act=document.createElement("div"); act.className="uact"; act.style.flexWrap="wrap";
+        const mk=(html,fn)=>{const x=document.createElement("button");x.className="btn ghost sm";x.innerHTML=html;x.addEventListener("click",fn);act.append(x)};
+        mk(u.banned?'<i class="fa-solid fa-lock-open"></i> Buka':'<i class="fa-solid fa-ban"></i> Blokir', async ()=>{
+            if(await appConfirm((u.banned?"Buka blokir ":"Blokir ")+(u.name||u.email)+"?",u.banned?"Anggota bisa masuk lagi.":"Anggota langsung dikeluarkan dan tidak bisa masuk.",u.banned?"Buka blokir":"Blokir",!u.banned))
+                patchUser(u,{banned:!u.banned},u.banned?"Blokir dibuka":"Akun diblokir");
+        });
+        mk(u.muted?'<i class="fa-solid fa-microphone"></i> Suarakan':'<i class="fa-solid fa-microphone-slash"></i> Bungkam', ()=>patchUser(u,{muted:!u.muted},u.muted?"Bungkam dibuka":"Anggota dibungkam"));
+        mk('<i class="fa-regular fa-calendar-plus"></i> Masa aktif', async ()=>{
+            const v=await appPrompt("Tambah masa aktif","Berapa hari untuk "+(u.name||u.email)+"? Isi 0 untuk tanpa batas.","30");
+            if(v===null) return; const d=parseInt(v); if(isNaN(d)||d<0) return toast("Isi angka hari yang valid.");
+            if(d===0) return patchUser(u,{expiresAt:null},"Masa aktif tanpa batas");
+            const base=Math.max(Date.now(),u.expiresAt?new Date(u.expiresAt).getTime():0);
+            patchUser(u,{expiresAt:new Date(base+d*864e5).toISOString()},"Masa aktif +"+d+" hari");
+        });
+        mk('<i class="fa-solid fa-eraser"></i> Hapus pesan', async ()=>{
+            if(!await appConfirm("Hapus semua pesan "+(u.name||u.email)+"?","Semua pesan dan foto yang pernah dikirim anggota ini akan dihapus permanen.","Hapus semua",true)) return;
+            try{
+                const s=await get(ref(rdb,"messages")), ids=[]; s.forEach(c=>{const v=c.val(); if(v&&v.senderId===u.id) ids.push(c.key)});
+                if(!ids.length) return toast("Anggota ini belum punya pesan.");
+                await deleteMsgs(ids); record("moderasi","Hapus semua pesan",(u.name||u.email)+" ("+ids.length+")"); toast(ids.length+" pesan dihapus");
+            }catch(e){ toast("Gagal menghapus pesan.") }
+        });
+        mk('<i class="fa-regular fa-copy"></i> Email', async()=>{try{await navigator.clipboard.writeText(u.email);toast("Email tersalin")}catch(e){toast("Gagal menyalin")}});
+        r.append(av,info,act); box.append(r);
+    });
+}
+$("userSearch").addEventListener("input",renderUsers);
+$("usersCsv").addEventListener("click",()=>{
+    if(!users.length) return toast("Belum ada anggota untuk diekspor.");
+    download("anggota.csv",[["email","nama","peran","bergabung","berlaku_sampai","status"],...users.filter(u=>u.email).map(u=>[u.email,u.name,u.role,u.joinedAt?new Date(u.joinedAt).toISOString():"",u.expiresAt||"tanpa batas",userStatus(u)[0]])]);
+});
+
+/* ---------- Moderasi ---------- */
+function renderMsgs(){
+    const q=$("msgSearch").value.trim().toLowerCase(), f=$("msgFil").value, box=$("msgList");
+    const rows=msgs.filter(m=>(!f||(f==="photo")===!!m.hasMedia)&&(!q||(m.text||"").toLowerCase().includes(q)||userName(m.senderId).toLowerCase().includes(q))).slice(0,200);
+    box.replaceChildren();
+    if(!rows.length){box.innerHTML='<p class="empty">'+(msgs.length?"Tidak ada pesan yang cocok.":"Belum ada pesan.")+'</p>';return}
+    rows.forEach(m=>{
+        const r=document.createElement("div"); r.className="mrow";
+        const av=document.createElement("div"); av.className="avatar"; av.textContent=(userName(m.senderId)[0]||"?").toUpperCase();
+        const body=document.createElement("div"); body.className="mbody";
+        const b=document.createElement("b"); b.textContent=userName(m.senderId);
+        const body2=document.createElement("div"); body2.textContent=m.hasMedia?"[Foto]"+(m.text?" "+m.text:""):(m.text||(m.attachment?"Lampiran: "+(typeof m.attachment==="string"?m.attachment:"data"):"-"));
+        const sm=document.createElement("small"); sm.textContent=(m.target==="general"?"Saluran umum":"Ke "+userName(m.target))+" · "+fmt(m.ts);
+        body.append(b,body2,sm);
+        const del=document.createElement("button"); del.className="btn ghost sm"; del.innerHTML='<i class="fa-solid fa-trash"></i> Hapus'; del.setAttribute("aria-label","Hapus pesan");
+        del.addEventListener("click", async ()=>{
+            if(!await appConfirm("Hapus pesan ini?","Pesan akan hilang dari semua anggota.","Hapus",true)) return;
+            try{ await deleteMsgs([m.id]); record("moderasi","Pesan dihapus",userName(m.senderId)+": "+((m.text||"[Foto]").slice(0,60))); toast("Pesan dihapus") }catch(e){ toast("Gagal menghapus pesan.") }
+        });
+        r.append(av,body,del); box.append(r);
+    });
+}
+$("msgSearch").addEventListener("input",renderMsgs);
+$("msgFil").addEventListener("change",renderMsgs);
+function renderStories(){
+    const box=$("storyList"); box.replaceChildren();
+    if(!stories.length){box.innerHTML='<p class="empty">Tidak ada cerita aktif.</p>';return}
+    stories.forEach(s=>{
+        const r=document.createElement("div"); r.className="mrow";
+        let th;
+        if(s.type!=="text"&&typeof s.media==="string"&&s.media.startsWith("data:image")){th=document.createElement("img");th.className="mthumb";th.alt="";th.src=s.media}
+        else{th=document.createElement("div");th.className="avatar";th.textContent=((userName(s.userId))[0]||"?").toUpperCase()}
+        const body=document.createElement("div"); body.className="mbody";
+        const b=document.createElement("b"); b.textContent=userName(s.userId);
+        const t=document.createElement("div"); t.textContent=s.type==="text"?(s.text||"-"):(s.caption||"[Media]");
+        const sm=document.createElement("small"); sm.textContent=(s.type==="text"?"Tulisan":"Media")+" · "+ago(s.ts)+" · dilihat "+Object.keys(s.viewedBy||{}).length+" orang";
+        body.append(b,t,sm);
+        const del=document.createElement("button"); del.className="btn ghost sm"; del.innerHTML='<i class="fa-solid fa-trash"></i> Hapus'; del.setAttribute("aria-label","Hapus cerita");
+        del.addEventListener("click", async ()=>{
+            if(!await appConfirm("Hapus cerita ini?","Cerita akan hilang dari semua anggota.","Hapus",true)) return;
+            try{ await update(ref(rdb),{["stories/"+s.id]:null}); record("moderasi","Cerita dihapus",userName(s.userId)); toast("Cerita dihapus") }catch(e){ toast("Gagal menghapus cerita.") }
+        });
+        r.append(th,body,del); box.append(r);
+    });
+}
+
+/* ---------- Sesi ---------- */
+function renderSessions(){
+    const only=$("sesFil").value==="online", q=$("sesSearch").value.trim().toLowerCase(), box=$("sesList");
+    const seen=users.filter(u=>u.email&&presence[u.id]&&presence[u.id].lastSeen);
+    $("sesOnline").textContent=users.filter(u=>isOnline(u.id)).length; $("sesTotal").textContent=seen.length;
+    const rows=seen.filter(u=>(!only||isOnline(u.id))&&(!q||(u.email||"").toLowerCase().includes(q)||(u.name||"").toLowerCase().includes(q)))
+        .sort((a,b)=>presence[b.id].lastSeen-presence[a.id].lastSeen);
+    box.replaceChildren();
+    if(!rows.length){box.innerHTML=`<p class="empty">${seen.length?"Tidak ada anggota yang cocok.":"Belum ada anggota yang aktif."}</p>`;return}
+    rows.forEach(u=>{
+        const on=isOnline(u.id), r=document.createElement("div"); r.className="urow";
+        const av=document.createElement("div"); av.className="avatar"; av.textContent=((u.name||u.email||"?")[0]||"?").toUpperCase();
+        const info=document.createElement("div"); info.className="uinfo";
+        const b=document.createElement("b"); b.textContent=u.name||u.email;
+        const bd=document.createElement("span"); bd.className="badge"+(on?" on":""); bd.textContent=on?"Online":"Offline"; b.append(bd);
+        const sm=document.createElement("small"); sm.textContent=(u.email||"")+" · Aktif "+ago(presence[u.id].lastSeen);
+        info.append(b,sm); r.append(av,info); box.append(r);
+    });
+}
+$("sesFil").addEventListener("change",renderSessions);
+$("sesSearch").addEventListener("input",renderSessions);
+setInterval(()=>{renderSessions();renderUsers()},30000);
+
+/* ---------- Integrasi ---------- */
+const copyOf=(btn,src,msg)=>$(btn).addEventListener("click",async()=>{try{await navigator.clipboard.writeText($(src).textContent);toast(msg)}catch(e){toast("Gagal menyalin")}});
+copyOf("schemaCopy","schemaCode","Struktur data tersalin");
+copyOf("rulesCopy","rulesCode","Aturan tersalin");
+
+/* ---------- Login moderator ---------- */
+function showLogin(){ $("app").hidden=true; $("login").hidden=false }
+function showApp(){ $("login").hidden=true; $("app").hidden=false }
+const loginErr={
+    "auth/invalid-credential":"Email atau password salah.","auth/wrong-password":"Email atau password salah.","auth/user-not-found":"Email atau password salah.",
+    "auth/invalid-email":"Format email tidak valid.","auth/too-many-requests":"Terlalu banyak percobaan. Coba lagi beberapa menit lagi.",
+    "auth/network-request-failed":"Koneksi internet bermasalah.","auth/user-disabled":"Akun ini dinonaktifkan.",
+    "auth/operation-not-allowed":"Metode Email/Password belum diaktifkan di Firebase Authentication."
+};
+if(!REQUIRE_ADMIN_LOGIN){ showApp(); $("whoEmail").textContent="Mode tanpa login"; start(); }
+else{
+    const saved=store.get("mod_email");
+    if(saved){ $("lEmail").value=saved.replace("@"+LOGIN_DOMAIN,""); $("lRemember").checked=true; }
+    else if(store.get("mod_remember")==="0"){ $("lRemember").checked=false }
+
+    onAuthStateChanged(auth,user=>{
+        unsubs.forEach(u=>u()); unsubs=[];
+        if(!user){ showLogin(); return }
+        if(user.isAnonymous || !user.email || (ADMIN_EMAILS.length && !ADMIN_EMAILS.includes(user.email))){
+            signOut(auth).then(()=>{ showLogin(); setMsg($("lMsg"),"err","Akun ini tidak punya akses moderator.") }); return;
+        }
+        adminEmail=user.email; $("whoEmail").textContent=user.email; $("logoutBtn").hidden=false;
+        showApp(); start();
+    });
+    $("lShow").addEventListener("click",()=>toggleEye($("lPass"),$("lShow")));
+    $("loginForm").addEventListener("submit", async e=>{
+        e.preventDefault();
+        const email=toEmail($("lEmail").value), pass=$("lPass").value, remember=$("lRemember").checked, btn=$("lBtn");
+        if(!email||!pass) return setMsg($("lMsg"),"err","Isi email dan password.");
+        btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> <span>Memeriksa...</span>'; $("lMsg").textContent="";
+        try{
+            await setPersistence(auth, remember?browserLocalPersistence:browserSessionPersistence);
+            await signInWithEmailAndPassword(auth,email,pass);
+            if(remember){ store.set("mod_email",email); store.del("mod_remember") } else{ store.del("mod_email"); store.set("mod_remember","0") }
+            $("lPass").value="";
+        }catch(err){ setMsg($("lMsg"),"err",loginErr[err.code]||"Gagal masuk. Coba lagi.") }
+        btn.disabled=false; btn.innerHTML="<span>Masuk</span>";
+    });
+    $("lForgot").addEventListener("click", async ()=>{
+        const email=toEmail($("lEmail").value);
+        if(!email) return setMsg($("lMsg"),"err","Isi email moderator dulu, lalu klik Lupa password.");
+        try{ await sendPasswordResetEmail(auth,email); setMsg($("lMsg"),"ok","Tautan reset dikirim ke "+email+".") }
+        catch(err){ setMsg($("lMsg"),"err","Gagal mengirim tautan reset.") }
+    });
+    $("logoutBtn").addEventListener("click",()=>signOut(auth));
+}
+</script>
+</body>
+</html>
