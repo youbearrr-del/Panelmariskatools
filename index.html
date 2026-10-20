@@ -298,6 +298,16 @@ details>div{margin-top:12px}
         <p class="desc">Cerita yang masih tayang (24 jam terakhir).</p>
         <div class="users" id="storyList"><p class="empty">Memuat...</p></div>
       </div>
+      <div class="panel">
+        <h2>Catatan tempel</h2>
+        <p class="desc">Semua catatan di papan ide bersama.</p>
+        <div class="users" id="noteList"><p class="empty">Memuat...</p></div>
+      </div>
+      <div class="panel">
+        <h2>Tugas</h2>
+        <p class="desc">Semua tugas tim.</p>
+        <div class="users" id="todoList"><p class="empty">Memuat...</p></div>
+      </div>
     </section>
 
     <!-- ===== KONTROL ===== -->
@@ -339,6 +349,16 @@ details>div{margin-top:12px}
         <textarea id="changelogInput" placeholder="Apa yang baru di versi ini..."></textarea>
         <label class="check" style="margin-top:14px"><input type="checkbox" id="forceInput"> Wajib update, pengguna tidak bisa melewati</label>
         <button class="btn block" id="btnUpdateVersion">Simpan versi</button>
+      </div>
+
+      <div class="panel">
+        <h2>Download APK</h2>
+        <p class="desc">Link unduhan aplikasi Android. Tombol Download APK di web chat otomatis memakai link ini.</p>
+        <div class="grid2">
+          <div><label class="lbl" for="apkInput">Link APK (https)</label><input class="input" id="apkInput" placeholder="https://..."></div>
+          <div><label class="lbl" for="apkName">Nama file</label><input class="input" id="apkName" placeholder="MariskaTools.apk"></div>
+        </div>
+        <button class="btn block" id="btnApk">Simpan link APK</button>
       </div>
 
       <div class="panel danger">
@@ -387,6 +407,8 @@ details>div{margin-top:12px}
   forceUpdate: boolean
   forceLogoutAt: waktu ISO (string)
   flags: { namaFitur: boolean }
+  apkUrl: string (https)
+  apkName: string
 
 users/{id}  (Firestore, ditulis web chat + panel)
   id, name, email, role, color, bio, photo, joinedAt
@@ -404,6 +426,10 @@ messages/{id}, stories/{id}, media/{id}  (Firestore, ditulis web chat)
   messages: id, senderId, target, text, ts, reactions, readBy
   stories: id, userId, type, media, text, ts, viewedBy
   media: d (foto chat dalam base64)
+
+notes/{id}, todos/{id}  (Firestore, ditulis web chat)
+  notes: id, color, text, authorId
+  todos: id, text, assigneeId, priority, completed
 
 pairing/{kode}, links/{userId_uid}  (Firestore, tautan perangkat web chat)</pre>
       </div>
@@ -463,6 +489,14 @@ service cloud.firestore {
              .hasAny(['banned', 'muted', 'expiresAt', 'email', 'ownerEmail', 'addedBy']));
       allow delete: if isAdmin() || ownsDoc(resource.data)
         || (hasEmail() &amp;&amp; resource.data.get('addedBy', '').lower() == myEmail());
+    }
+
+    match /notes/{id} {
+      allow read, create, update, delete: if signedIn();
+    }
+
+    match /todos/{id} {
+      allow read, create, update, delete: if signedIn();
     }
 
     match /presence/{id} {
@@ -558,10 +592,10 @@ const auth = getAuth(app), db = getFirestore(app);
 const configDocRef = doc(db, "system", "config");
 
 const $ = id => document.getElementById(id);
-let adminEmail = "panel", unsubs = [], logs = [], users = [], presence = {}, msgs = [], stories = [], flags = {}, filled = false;
+let adminEmail = "panel", unsubs = [], logs = [], users = [], presence = {}, msgs = [], stories = [], flags = {}, filled = false, notes = [], todos = [];
 const PRESENCE_MS = 90000;
 const COLORS = ["#4F46E5", "#ec4899", "#10b981", "#f59e0b", "#0ea5e9"];
-const PRESETS = [["tugas", "Halaman Tugas"], ["ruang", "Ruang bersama"], ["catatan", "Catatan"], ["foto_chat", "Kirim foto di chat"]];
+const PRESETS = [["tugas", "Halaman Tugas"], ["ruang", "Ruang bersama"], ["catatan", "Catatan"], ["foto_chat", "Kirim foto di chat"], ["cerita", "Cerita"], ["wallpaper", "Wallpaper chat"], ["apk", "Tombol Download APK"], ["perangkat", "Perangkat tertaut"]];
 
 /* ---------- Util ---------- */
 function toast(t){const e=$("toast");e.textContent=t;e.classList.add("on");clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove("on"),2800)}
@@ -688,12 +722,12 @@ function start(){
         $("sAnn").textContent=d.announcement?"Aktif":"Tidak ada";
         $("annNow").textContent=d.announcement?'"'+d.announcement+'"':"tidak ada";
         flags=d.flags||{}; renderFlags();
-        if(!filled){filled=true;$("versionInput").value=d.version||"";$("urlInput").value=d.updateUrl||"";$("changelogInput").value=d.changelog||"";$("forceInput").checked=d.forceUpdate===true;$("maintMsg").value=d.maintenanceMessage||"";$("annType").value=d.announcementType||"info"}
+        if(!filled){filled=true;$("versionInput").value=d.version||"";$("urlInput").value=d.updateUrl||"";$("changelogInput").value=d.changelog||"";$("forceInput").checked=d.forceUpdate===true;$("maintMsg").value=d.maintenanceMessage||"";$("annType").value=d.announcementType||"info";$("apkInput").value=d.apkUrl||"";$("apkName").value=d.apkName||""}
     }, ()=>toast("Gagal membaca pengaturan. Periksa aturan Firestore.")));
     unsubs.push(onSnapshot(query(collection(db,"logs"),orderBy("time","desc"),limit(100)), s=>{logs=s.docs.map(d=>d.data());renderHist()}, ()=>{}));
     unsubs.push(onSnapshot(collection(db,"users"), s=>{
         users=s.docs.map(d=>({...d.data(),id:d.id})).sort((a,b)=>(b.joinedAt||0)-(a.joinedAt||0));
-        renderUsers(); renderSessions(); renderMsgs(); renderStories();
+        renderUsers(); renderSessions(); renderMsgs(); renderStories(); renderNotes(); renderTodos();
     }, failBox("userList",'Daftar anggota tidak bisa dibaca. Periksa aturan Firestore untuk koleksi "users".')));
     unsubs.push(onSnapshot(collection(db,"presence"), s=>{
         presence={}; s.docs.forEach(d=>{const v=d.data(); presence[d.id]={online:!!v.online,lastSeen:v.lastSeen&&v.lastSeen.toMillis?v.lastSeen.toMillis():0}});
@@ -705,6 +739,12 @@ function start(){
     unsubs.push(onSnapshot(collection(db,"stories"), s=>{
         stories=s.docs.map(d=>({...d.data(),id:d.id})).filter(x=>(x.ts||0)>Date.now()-864e5).sort((a,b)=>(b.ts||0)-(a.ts||0)); renderStories();
     }, failBox("storyList","Cerita tidak bisa dibaca. Periksa aturan Firestore untuk koleksi \"stories\".")));
+    unsubs.push(onSnapshot(collection(db,"notes"), s=>{
+        notes=s.docs.map(d=>({...d.data(),id:d.id})).sort((a,b)=>String(b.id).localeCompare(String(a.id))); renderNotes();
+    }, failBox("noteList",'Catatan tidak bisa dibaca. Tambahkan aturan Firestore untuk koleksi "notes" (lihat tab Integrasi).')));
+    unsubs.push(onSnapshot(collection(db,"todos"), s=>{
+        todos=s.docs.map(d=>({...d.data(),id:d.id})).sort((a,b)=>Number(b.id)-Number(a.id)); renderTodos();
+    }, failBox("todoList",'Tugas tidak bisa dibaca. Tambahkan aturan Firestore untuk koleksi "todos" (lihat tab Integrasi).')));
 }
 
 /* ---------- Riwayat ---------- */
@@ -748,6 +788,11 @@ $("btnUpdateVersion").addEventListener("click", async ()=>{
     if(!/^\d+(\.\d+){0,3}$/.test(version)) return toast("Versi harus berupa angka, contoh 1.1.0");
     if(url&&!/^https:\/\//i.test(url)) return toast("Link harus diawali https://");
     saveCfg({version,updateUrl:url,changelog:$("changelogInput").value.trim(),forceUpdate:$("forceInput").checked},"Versi diperbarui","Versi tersimpan","Gagal menyimpan versi.","v"+version+($("forceInput").checked?" (wajib)":""));
+});
+$("btnApk").addEventListener("click",()=>{
+    const u=$("apkInput").value.trim(), n=$("apkName").value.trim()||"MariskaTools.apk";
+    if(u&&!/^https:\/\//i.test(u)) return toast("Link harus diawali https://");
+    saveCfg({apkUrl:u,apkName:n},"Link APK diperbarui","Link APK tersimpan","Gagal menyimpan link APK.",u||"dikosongkan");
 });
 $("forceLogoutBtn").addEventListener("click", async ()=>{
     if(!await appConfirm("Paksa semua keluar?","Semua pengguna akan dipaksa login ulang.","Paksa logout",true)) return;
@@ -879,6 +924,10 @@ function renderUsers(){
                 await deleteMsgs(ids); record("moderasi","Hapus semua pesan",(u.name||u.email)+" ("+ids.length+")"); toast(ids.length+" pesan dihapus");
             }catch(e){ toast("Gagal menghapus pesan.") }
         });
+        mk('<i class="fa-solid fa-user-xmark"></i> Hapus akun', async ()=>{
+            if(!await appConfirm("Hapus akun "+(u.name||u.email)+"?","Akun dihapus permanen dari web chat. Pesan lama tetap ada kecuali dihapus lewat tombol Hapus pesan.","Hapus akun",true)) return;
+            try{ await deleteDoc(doc(db,"users",u.id)); deleteDoc(doc(db,"presence",u.id)).catch(()=>{}); record("akun","Akun dihapus",u.email); toast("Akun dihapus") }catch(e){ toast("Gagal menghapus akun.") }
+        });
         mk('<i class="fa-regular fa-copy"></i> Email', async()=>{try{await navigator.clipboard.writeText(u.email);toast("Email tersalin")}catch(e){toast("Gagal menyalin")}});
         r.append(av,info,act); box.append(r);
     });
@@ -934,6 +983,27 @@ function renderStories(){
         r.append(th,body,del); box.append(r);
     });
 }
+
+function listRows(boxId,rows,emptyTxt){
+    const box=$(boxId); box.replaceChildren();
+    if(!rows.length){box.innerHTML='<p class="empty">'+emptyTxt+'</p>';return}
+    rows.forEach(x=>{
+        const r=document.createElement("div"); r.className="mrow";
+        const b=document.createElement("div"); b.className="mbody";
+        const t=document.createElement("b"); t.textContent=x.title;
+        const c=document.createElement("div"); c.textContent=x.text;
+        const s=document.createElement("small"); s.textContent=x.meta;
+        b.append(t,c,s);
+        const d=document.createElement("button"); d.className="btn ghost sm"; d.innerHTML='<i class="fa-solid fa-trash"></i> Hapus';
+        d.addEventListener("click", async ()=>{
+            if(!await appConfirm(x.q,"Perubahan langsung tampil di web chat.","Hapus",true)) return;
+            try{ await deleteDoc(doc(db,x.col,x.id)); record("moderasi",x.log,x.title+": "+x.text.slice(0,60)); toast("Dihapus") }catch(e){ toast("Gagal menghapus.") }
+        });
+        r.append(b,d); box.append(r);
+    });
+}
+function renderNotes(){ listRows("noteList",notes.map(n=>({col:"notes",id:n.id,title:userName(n.authorId),text:n.text||"-",meta:"Warna "+(n.color||"-"),q:"Hapus catatan ini?",log:"Catatan dihapus"})),"Belum ada catatan.") }
+function renderTodos(){ listRows("todoList",todos.map(t=>({col:"todos",id:t.id,title:userName(t.assigneeId),text:t.text||"-",meta:"Prioritas "+(t.priority||"-")+" · "+(t.completed?"Selesai":"Belum selesai"),q:"Hapus tugas ini?",log:"Tugas dihapus"})),"Belum ada tugas.") }
 
 /* ---------- Sesi ---------- */
 function renderSessions(){
