@@ -400,7 +400,12 @@ presence/{id}  (Firestore, ditulis web chat)
 logs/{auto}  (Firestore, ditulis panel)
   type, action, detail, admin, time
 
-messages/{id}, stories/{id}, media/{id}  (Realtime Database)</pre>
+messages/{id}, stories/{id}, media/{id}  (Firestore, ditulis web chat)
+  messages: id, senderId, target, text, ts, reactions, readBy
+  stories: id, userId, type, media, text, ts, viewedBy
+  media: d (foto chat dalam base64)
+
+pairing/{kode}, links/{userId_uid}  (Firestore, tautan perangkat web chat)</pre>
       </div>
 
       <div class="panel">
@@ -410,24 +415,102 @@ messages/{id}, stories/{id}, media/{id}  (Realtime Database)</pre>
 <pre class="code" id="rulesCode">rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isMod() {
-      return request.auth != null
-        &amp;&amp; request.auth.token.email in ['mariskadm@mariskatools.app'];
+
+    function signedIn() { return request.auth != null; }
+    function hasEmail() { return signedIn() &amp;&amp; 'email' in request.auth.token; }
+    function myEmail() { return request.auth.token.email.lower(); }
+
+    // Moderator: akun Email/Password panel ini
+    function isAdmin() {
+      return hasEmail()
+        &amp;&amp; request.auth.token.firebase.sign_in_provider == 'password'
+        &amp;&amp; myEmail() in ['mariskadm@mariskatools.app'];
     }
-    match /system/{doc} {
-      allow read: if request.auth != null;
-      allow write: if isMod();
+
+    function userDoc(uid) { return get(/databases/$(database)/documents/users/$(uid)).data; }
+    function isOwner(uid) {
+      return hasEmail() &amp;&amp; (
+        userDoc(uid).get('email', '').lower() == myEmail() ||
+        userDoc(uid).get('ownerEmail', '').lower() == myEmail());
     }
-    match /logs/{id} { allow read, write: if isMod(); }
-    match /presence/{id} { allow read, write: if request.auth != null; }
+    function isLinked(uid) {
+      return signedIn() &amp;&amp; exists(/databases/$(database)/documents/links/$(uid + '_' + request.auth.uid));
+    }
+    function isMine(uid) { return isOwner(uid) || isLinked(uid); }
+    function ownsDoc(d) {
+      return hasEmail() &amp;&amp; (d.get('email', '').lower() == myEmail() || d.get('ownerEmail', '').lower() == myEmail());
+    }
+
+    match /system/{id} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /logs/{id} {
+      allow read, write: if isAdmin();
+    }
+
     match /users/{id} {
-      allow read: if request.auth != null;
-      allow create: if isMod() || (request.auth != null
-        &amp;&amp; !request.resource.data.keys().hasAny(['banned','muted','expiresAt']));
-      allow update: if isMod() || (request.auth != null
+      allow read: if signedIn();
+      allow create: if isAdmin() || (hasEmail()
+        &amp;&amp; !request.resource.data.keys().hasAny(['banned', 'muted', 'expiresAt'])
+        &amp;&amp; (request.resource.data.get('email', '').lower() == myEmail()
+            || request.resource.data.get('ownerEmail', '').lower() == myEmail()
+            || request.resource.data.get('addedBy', '').lower() == myEmail()));
+      allow update: if isAdmin() || (signedIn()
+        &amp;&amp; (ownsDoc(resource.data) || isLinked(id))
         &amp;&amp; !request.resource.data.diff(resource.data).affectedKeys()
-            .hasAny(['banned','muted','expiresAt']));
-      allow delete: if isMod();
+             .hasAny(['banned', 'muted', 'expiresAt', 'email', 'ownerEmail', 'addedBy']));
+      allow delete: if isAdmin() || ownsDoc(resource.data)
+        || (hasEmail() &amp;&amp; resource.data.get('addedBy', '').lower() == myEmail());
+    }
+
+    match /presence/{id} {
+      allow read, write: if signedIn();
+    }
+
+    match /messages/{id} {
+      allow read: if signedIn();
+      allow create: if isMine(request.resource.data.senderId);
+      allow update: if isMine(resource.data.senderId) || (signedIn()
+        &amp;&amp; request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions', 'readBy']));
+      allow delete: if isAdmin() || isMine(resource.data.senderId);
+    }
+
+    match /stories/{id} {
+      allow read: if signedIn();
+      allow create: if isMine(request.resource.data.userId);
+      allow update: if isMine(resource.data.userId) || (signedIn()
+        &amp;&amp; request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewedBy']));
+      allow delete: if isAdmin() || isMine(resource.data.userId)
+        || resource.data.get('ts', 0) &lt; request.time.toMillis() - 86400000;
+    }
+
+    match /media/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn();
+      allow update: if id == '_diag';
+      allow delete: if isAdmin() || id == '_diag';
+    }
+
+    match /pairing/{code} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create: if isMine(request.resource.data.userId);
+      allow update: if false;
+      allow delete: if signedIn();
+    }
+
+    match /links/{lid} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        &amp;&amp; lid == request.resource.data.userId + '_' + request.auth.uid
+        &amp;&amp; request.resource.data.uid == request.auth.uid
+        &amp;&amp; exists(/databases/$(database)/documents/pairing/$(request.resource.data.code))
+        &amp;&amp; get(/databases/$(database)/documents/pairing/$(request.resource.data.code)).data.userId == request.resource.data.userId
+        &amp;&amp; get(/databases/$(database)/documents/pairing/$(request.resource.data.code)).data.exp &gt; request.time.toMillis();
+      allow update: if false;
+      allow delete: if signedIn() &amp;&amp; (resource.data.uid == request.auth.uid || isOwner(resource.data.userId));
     }
   }
 }</pre>
@@ -438,7 +521,7 @@ service cloud.firestore {
         <ol class="steps">
           <li>Di Firebase Console proyek ini, buka Authentication, Sign-in method, lalu aktifkan <b>Email/Password</b>.</li>
           <li>Di Authentication, Users, klik Add user: email <span class="mono">mariskadm@mariskatools.app</span> dengan password akun moderator. Di halaman login cukup ketik <span class="mono">mariskadm</span>.</li>
-          <li>Pastikan Realtime Database mengizinkan moderator menghapus <span class="mono">messages</span>, <span class="mono">stories</span>, dan <span class="mono">media</span>.</li>
+          <li>Tempel aturan Firestore di atas lalu klik Publish. Aturan itu sudah mencakup <span class="mono">messages</span>, <span class="mono">stories</span>, <span class="mono">media</span>, dan <span class="mono">logs</span>. Realtime Database tidak dipakai lagi.</li>
           <li>Tambahkan domain tempat panel ini di-host ke Authentication, Settings, Authorized domains.</li>
         </ol>
       </div>
@@ -449,8 +532,7 @@ service cloud.firestore {
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, setPersistence, browserLocalPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, addDoc, query, orderBy, limit, updateDoc, deleteField } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
-import { getDatabase, ref, onValue, get, update, query as rtQuery, limitToLast } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, addDoc, query, orderBy, limit, updateDoc, deleteField, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 // Isi dengan email moderator yang sudah dibuat di Firebase Authentication.
 const REQUIRE_ADMIN_LOGIN = true;
@@ -472,7 +554,7 @@ const firebaseConfig = {
 
 // Nama instance khusus agar sesi moderator tidak bentrok dengan sesi anonim web chat di domain yang sama.
 const app = initializeApp(firebaseConfig, "moderator");
-const auth = getAuth(app), db = getFirestore(app), rdb = getDatabase(app);
+const auth = getAuth(app), db = getFirestore(app);
 const configDocRef = doc(db, "system", "config");
 
 const $ = id => document.getElementById(id);
@@ -617,14 +699,12 @@ function start(){
         presence={}; s.docs.forEach(d=>{const v=d.data(); presence[d.id]={online:!!v.online,lastSeen:v.lastSeen&&v.lastSeen.toMillis?v.lastSeen.toMillis():0}});
         renderSessions(); renderUsers();
     }, failBox("sesList",'Data sesi tidak bisa dibaca. Periksa aturan Firestore untuk koleksi "presence".')));
-    unsubs.push(onValue(rtQuery(ref(rdb,"messages"),limitToLast(200)), s=>{
-        msgs=[]; s.forEach(c=>{const v=c.val(); if(v&&typeof v==="object") msgs.push({...v,id:c.key})});
-        msgs.sort((a,b)=>(b.ts||0)-(a.ts||0)); renderMsgs();
-    }, failBox("msgList","Pesan tidak bisa dibaca. Periksa aturan Realtime Database.")));
-    unsubs.push(onValue(ref(rdb,"stories"), s=>{
-        stories=[]; s.forEach(c=>{const v=c.val(); if(v&&typeof v==="object") stories.push({...v,id:c.key})});
-        stories=stories.filter(x=>(x.ts||0)>Date.now()-864e5).sort((a,b)=>(b.ts||0)-(a.ts||0)); renderStories();
-    }, failBox("storyList","Cerita tidak bisa dibaca. Periksa aturan Realtime Database.")));
+    unsubs.push(onSnapshot(query(collection(db,"messages"),orderBy("ts","desc"),limit(200)), s=>{
+        msgs=s.docs.filter(d=>!d.id.startsWith("_")).map(d=>({...d.data(),id:d.id})); renderMsgs();
+    }, failBox("msgList","Pesan tidak bisa dibaca. Periksa aturan Firestore untuk koleksi \"messages\".")));
+    unsubs.push(onSnapshot(collection(db,"stories"), s=>{
+        stories=s.docs.map(d=>({...d.data(),id:d.id})).filter(x=>(x.ts||0)>Date.now()-864e5).sort((a,b)=>(b.ts||0)-(a.ts||0)); renderStories();
+    }, failBox("storyList","Cerita tidak bisa dibaca. Periksa aturan Firestore untuk koleksi \"stories\".")));
 }
 
 /* ---------- Riwayat ---------- */
@@ -752,8 +832,11 @@ async function patchUser(u,data,logAction){
     catch(e){ toast("Gagal menyimpan. Periksa aturan Firestore.") }
 }
 async function deleteMsgs(ids){
-    const ups={}; ids.forEach(id=>{ups["messages/"+id]=null; ups["media/"+id]=null});
-    await update(ref(rdb),ups);
+    for(let i=0;i<ids.length;i+=200){
+        const b=writeBatch(db);
+        ids.slice(i,i+200).forEach(id=>{ b.delete(doc(db,"messages",id)); b.delete(doc(db,"media",id)) });
+        await b.commit();
+    }
 }
 function renderUsers(){
     const q=$("userSearch").value.trim().toLowerCase(), box=$("userList");
@@ -791,7 +874,7 @@ function renderUsers(){
         mk('<i class="fa-solid fa-eraser"></i> Hapus pesan', async ()=>{
             if(!await appConfirm("Hapus semua pesan "+(u.name||u.email)+"?","Semua pesan dan foto yang pernah dikirim anggota ini akan dihapus permanen.","Hapus semua",true)) return;
             try{
-                const s=await get(ref(rdb,"messages")), ids=[]; s.forEach(c=>{const v=c.val(); if(v&&v.senderId===u.id) ids.push(c.key)});
+                const s=await getDocs(query(collection(db,"messages"),where("senderId","==",u.id))), ids=s.docs.map(d=>d.id);
                 if(!ids.length) return toast("Anggota ini belum punya pesan.");
                 await deleteMsgs(ids); record("moderasi","Hapus semua pesan",(u.name||u.email)+" ("+ids.length+")"); toast(ids.length+" pesan dihapus");
             }catch(e){ toast("Gagal menghapus pesan.") }
@@ -846,7 +929,7 @@ function renderStories(){
         const del=document.createElement("button"); del.className="btn ghost sm"; del.innerHTML='<i class="fa-solid fa-trash"></i> Hapus'; del.setAttribute("aria-label","Hapus cerita");
         del.addEventListener("click", async ()=>{
             if(!await appConfirm("Hapus cerita ini?","Cerita akan hilang dari semua anggota.","Hapus",true)) return;
-            try{ await update(ref(rdb),{["stories/"+s.id]:null}); record("moderasi","Cerita dihapus",userName(s.userId)); toast("Cerita dihapus") }catch(e){ toast("Gagal menghapus cerita.") }
+            try{ await deleteDoc(doc(db,"stories",s.id)); record("moderasi","Cerita dihapus",userName(s.userId)); toast("Cerita dihapus") }catch(e){ toast("Gagal menghapus cerita.") }
         });
         r.append(th,body,del); box.append(r);
     });
